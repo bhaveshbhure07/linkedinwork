@@ -28,7 +28,7 @@ async def main():
     try:
         chat_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="llama3-70b-8192",
+            model="llama-3.3-70b-versatile",
         )
         caption = chat_completion.choices[0].message.content
         

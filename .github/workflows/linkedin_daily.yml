@@ -1,7 +1,7 @@
 name: Awork LinkedIn Private Draft
 on:
   schedule:
-    - cron: '30 8 * * *'
+    - cron: '30 4 * * *' # 9:30 AM IST
   workflow_dispatch:
 
 jobs:
@@ -14,9 +14,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
-      - # ... (upar ka part same rahega)
       - name: Install Dependencies
         run: |
           pip install pyrogram tgcrypto groq pillow
@@ -29,3 +28,4 @@ jobs:
           LINKEDIN_BOT_TOKEN: ${{ secrets.LINKEDIN_BOT_TOKEN }}
           PRIVATE_CHAT_ID: ${{ secrets.PRIVATE_CHAT_ID }}
         run: python linkedin_poster.py
+        

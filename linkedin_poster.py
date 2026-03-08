@@ -33,9 +33,26 @@ async def main():
         img.save("linkedin_post.png")
 
         # Telegram Send
+                # Pyrogram Client
         async with Client("Awork_Session", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN) as app:
-            print("🔗 Connecting to Private Group...")
-            await asyncio.sleep(2) # Connection stabilize hone do
+            print("🔗 Resolving Peer and Connecting...")
+            
+            try:
+                # CRITICAL: Ye line 'Peer id invalid' error ko khatam karegi
+                # Isse bot group ko "dhund" lega
+                peer = await app.get_chat(CHAT_ID) 
+                print(f"✅ Peer Resolved: {peer.title}")
+
+                # Ab photo bhejo
+                await app.send_photo(
+                    chat_id=peer.id, 
+                    photo="linkedin_post.png", 
+                    caption=caption
+                )
+                print("🚀 Success! Group mein check karo.")
+            except Exception as e:
+                print(f"❌ Sending failed: {e}")
+
             
             # Message bhejna
             await app.send_photo(

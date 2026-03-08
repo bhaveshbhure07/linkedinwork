@@ -18,7 +18,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install pyrogram tgcrypto google-generativeai pillow
+          pip install pyrogram tgcrypto google-genai pillow
 
       - name: Run LinkedIn Script
         env:

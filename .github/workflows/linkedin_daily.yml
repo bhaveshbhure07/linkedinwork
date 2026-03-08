@@ -16,15 +16,16 @@ jobs:
         with:
           python-version: '3.10'
 
+      - # ... (upar ka part same rahega)
       - name: Install Dependencies
         run: |
-          pip install pyrogram tgcrypto google-genai pillow
+          pip install pyrogram tgcrypto groq pillow
 
       - name: Run LinkedIn Script
         env:
           API_ID: ${{ secrets.API_ID }}
           API_HASH: ${{ secrets.API_HASH }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           LINKEDIN_BOT_TOKEN: ${{ secrets.LINKEDIN_BOT_TOKEN }}
           PRIVATE_CHAT_ID: ${{ secrets.PRIVATE_CHAT_ID }}
         run: python linkedin_poster.py

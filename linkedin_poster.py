@@ -157,20 +157,17 @@ def create_banner(company, role):
 async def send_to_telegram(image, caption):
 
     async with Client(
-        "Awork_Bot",
+        "bot",
         api_id=API_ID,
         api_hash=API_HASH,
         bot_token=BOT_TOKEN
     ) as app:
-
-        await app.get_chat(CHAT_ID)
 
         await app.send_photo(
             chat_id=CHAT_ID,
             photo=image,
             caption=caption
         )
-
         print("✅ Post sent to Telegram")
 
 

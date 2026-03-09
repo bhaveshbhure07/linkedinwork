@@ -1,65 +1,216 @@
 import os
 import asyncio
+import requests
 from pyrogram import Client
 from groq import Groq
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
+import textwrap
+import random
 
-# Config
-API_ID = int(os.environ.get('API_ID'))
-API_HASH = os.environ.get('API_HASH')
-GROQ_KEY = os.environ.get('GROQ_API_KEY')
-BOT_TOKEN = os.environ.get('LINKEDIN_BOT_TOKEN')
-CHAT_ID = -1003422278522 # Verified Private Group ID
 
-async def main():
-    if not all([API_ID, API_HASH, GROQ_KEY, BOT_TOKEN]):
-        print("❌ Error: Secrets missing in GitHub Settings!")
-        return
+# =========================
+# CONFIG (GitHub Secrets)
+# =========================
 
-    client = Groq(api_key=GROQ_KEY)
-    company, role, batch = "TCS", "Software Developer", "2025-2027"
-    
-    prompt = f"Write a professional LinkedIn post for {company} hiring {role} for {batch}. Use 🚨 emojis, bullet points, and a clear 'Apply Link' placeholder."
+API_ID = int(os.environ.get("API_ID"))
+API_HASH = os.environ.get("API_HASH")
+GROQ_KEY = os.environ.get("GROQ_API_KEY")
+BOT_TOKEN = os.environ.get("LINKEDIN_BOT_TOKEN")
+CHAT_ID = int(os.environ.get("PRIVATE_CHAT_ID"))
+
+
+# =========================
+# FETCH JOBS
+# =========================
+
+def fetch_jobs():
+
+    url = "https://remotive.com/api/remote-jobs"
 
     try:
-        # 1. Groq se Caption generate karna
-        chat_completion = client.chat.completions.create(
-            messages=[{"role": "user", "content": prompt}],
-            model="llama-3.3-70b-versatile",
+
+        response = requests.get(url, timeout=10)
+        data = response.json()
+
+        jobs = []
+
+        for job in data["jobs"][:25]:
+
+            jobs.append({
+                "company": job["company_name"],
+                "role": job["title"],
+                "link": job["url"]
+            })
+
+        return jobs
+
+    except:
+        return []
+
+
+# =========================
+# SELECT BEST JOB
+# =========================
+
+def pick_best_job(jobs):
+
+    big_companies = [
+        "Google",
+        "Amazon",
+        "Microsoft",
+        "Meta",
+        "Apple",
+        "Netflix",
+        "Adobe",
+        "Intel",
+        "IBM"
+    ]
+
+    for job in jobs:
+
+        if job["company"] in big_companies:
+
+            return job
+
+    if jobs:
+        return random.choice(jobs)
+
+    return {
+        "company": "TCS",
+        "role": "Software Developer",
+        "link": "https://linkedin.com/jobs"
+    }
+
+
+# =========================
+# AI CAPTION GENERATOR
+# =========================
+
+def generate_caption(company, role, link):
+
+    client = Groq(api_key=GROQ_KEY)
+
+    prompt = f"""
+Write a VIRAL LinkedIn hiring post.
+
+Company: {company}
+Role: {role}
+
+Rules:
+Short hook line
+Explain opportunity
+Call to action: Comment INTERESTED
+
+Add emojis.
+
+Max 120 words.
+"""
+
+    chat = client.chat.completions.create(
+        model="llama3-70b-8192",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7
+    )
+
+    return chat.choices[0].message.content
+
+
+# =========================
+# BANNER GENERATOR
+# =========================
+
+def create_banner(company, role):
+
+    width = 1080
+    height = 1080
+
+    img = Image.new("RGB", (width, height), (20, 25, 35))
+
+    draw = ImageDraw.Draw(img)
+
+    try:
+        font_big = ImageFont.truetype("DejaVuSans-Bold.ttf", 80)
+        font_small = ImageFont.truetype("DejaVuSans.ttf", 45)
+    except:
+        font_big = ImageFont.load_default()
+        font_small = ImageFont.load_default()
+
+    title = "WE ARE HIRING"
+
+    role_text = textwrap.fill(role, width=18)
+
+    draw.text((200, 200), title, fill="white", font=font_big)
+    draw.text((200, 420), role_text, fill="cyan", font=font_small)
+    draw.text((200, 720), company, fill="white", font=font_small)
+
+    path = "linkedin_post.png"
+
+    img.save(path)
+
+    return path
+
+
+# =========================
+# TELEGRAM SEND
+# =========================
+
+async def send_to_telegram(image, caption):
+
+    async with Client(
+        "Awork_Bot",
+        api_id=API_ID,
+        api_hash=API_HASH,
+        bot_token=BOT_TOKEN
+    ) as app:
+
+        await app.get_chat(CHAT_ID)
+
+        await app.send_photo(
+            chat_id=CHAT_ID,
+            photo=image,
+            caption=caption
         )
-        caption = chat_completion.choices[0].message.content
-        
-        # 2. Image create karna
-        img = Image.new('RGB', (1080, 1350), color=(210, 180, 140))
-        img.save("linkedin_post.png")
 
-        # 3. Telegram Send (Pyrogram)
-        async with Client("Awork_Session", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN) as app:
-            print("🔗 Connecting and resolving peer...")
-            
-            try:
-                # Peer resolve karna compulsory hai GitHub Actions ke liye
-                peer = await app.get_chat(CHAT_ID)
-                print(f"✅ Group found: {peer.title}")
-                
-                # Chhota pause connection stabilize karne ke liye
-                await asyncio.sleep(3)
+        print("✅ Post sent to Telegram")
 
-                # Ab photo bhejo (Only ONE time)
-                await app.send_photo(
-                    chat_id=peer.id, 
-                    photo="linkedin_post.png", 
-                    caption=caption
-                )
-                print("🚀 Success! Message sent to Group.")
 
-            except Exception as e:
-                print(f"❌ Telegram Error: {e}")
-                print("💡 Tip: Bot ko group mein Admin banao aur 'Send Media' permission check karo.")
-            
-    except Exception as e:
-        print(f"⚠️ Overall Error: {e}")
+# =========================
+# MAIN PIPELINE
+# =========================
 
+async def main():
+
+    if not all([API_ID, API_HASH, GROQ_KEY, BOT_TOKEN, CHAT_ID]):
+
+        print("❌ Missing GitHub Secrets")
+        return
+
+    print("🚀 Fetching jobs...")
+
+    jobs = fetch_jobs()
+
+    job = pick_best_job(jobs)
+
+    company = job["company"]
+    role = job["role"]
+    link = job["link"]
+
+    print("🤖 Generating AI caption...")
+
+    caption = generate_caption(company, role, link)
+
+    print("🎨 Creating banner...")
+
+    banner = create_banner(company, role)
+
+    print("📤 Sending to Telegram...")
+
+    await send_to_telegram(banner, caption)
+
+    print("✅ Done!")
+
+
+# =========================
 if __name__ == "__main__":
+
     asyncio.run(main())
-    

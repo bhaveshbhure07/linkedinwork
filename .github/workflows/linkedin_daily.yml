@@ -1,13 +1,16 @@
 name: Awork LinkedIn Private Draft
+
 on:
   schedule:
-    - cron: '30 4 * * *' # 9:30 AM IST
+    - cron: '30 3 * * *'   # 9:00 AM IST
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
+
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -18,7 +21,8 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install pyrogram tgcrypto groq pillow
+          python -m pip install --upgrade pip
+          pip install requests pyrogram tgcrypto groq pillow
 
       - name: Run LinkedIn Script
         env:
@@ -28,4 +32,3 @@ jobs:
           LINKEDIN_BOT_TOKEN: ${{ secrets.LINKEDIN_BOT_TOKEN }}
           PRIVATE_CHAT_ID: ${{ secrets.PRIVATE_CHAT_ID }}
         run: python linkedin_poster.py
-        
